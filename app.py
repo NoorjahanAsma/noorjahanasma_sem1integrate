@@ -75,4 +75,4 @@ if question:
 # Footer
 # -----------------------------
 st.markdown("---")
-st.caption("📌 Built as an academic AI assistant with safe fallback handling.")
+st.caption("Academic AI assistant")

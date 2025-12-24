@@ -1,21 +1,21 @@
 import streamlit as st
+import requests
 from openai import OpenAI
 
-# -----------------------------
-# Page Configuration
-# -----------------------------
+# ----------------------------
+# Page Config
+# ----------------------------
 st.set_page_config(
-    page_title="AI Tutor App",
+    page_title="AI Academic Tutor",
     layout="centered"
 )
 
-st.title("🎓 AI Tutor App")
-st.write("Ask questions and get help from AI")
+st.title("🎓 AI Academic Tutor")
+st.write("Real-time AI assistance for postgraduate students")
 
-# -----------------------------
-# Optional OpenAI Client
-# (Used only if API is available)
-# -----------------------------
+# ----------------------------
+# OpenAI Client (Primary)
+# ----------------------------
 client = None
 try:
     if "OPENAI_API_KEY" in st.secrets:
@@ -23,56 +23,56 @@ try:
 except Exception:
     client = None
 
-# -----------------------------
-# Fallback / Mock AI Function
-# -----------------------------
-def fallback_ai_response(question):
-    """
-    This function is used when:
-    - API key is missing
-    - Billing / quota is exceeded
-    - Internet is unavailable
+# ----------------------------
+# Hugging Face (Secondary - FREE)
+# ----------------------------
+HF_API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
-    This ensures the app never crashes.
-    """
-    return (
-        f"🔹 Simulated AI Response 🔹\n\n"
-        f"You asked: '{question}'\n\n"
-        "This response is generated using a fallback mechanism. "
-        "In production, a real AI model (OpenAI) will generate the answer."
+def huggingface_response(question):
+    payload = {"inputs": question}
+    response = requests.post(HF_API_URL, json=payload, timeout=30)
+
+    if response.status_code == 200:
+        return response.json()[0]["generated_text"]
+    return "AI service temporarily unavailable."
+
+# ----------------------------
+# OpenAI Response
+# ----------------------------
+def openai_response(question):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an academic tutor for postgraduate students."},
+            {"role": "user", "content": question}
+        ],
+        max_tokens=250
     )
+    return response.choices[0].message.content
 
-# -----------------------------
-# User Input
-# -----------------------------
-question = st.text_input("Ask a question:")
+# ----------------------------
+# Input
+# ----------------------------
+question = st.text_input("Ask your academic question:")
 
-# -----------------------------
-# Process Question
-# -----------------------------
 if question:
-    with st.spinner("Thinking..."):
+    with st.spinner("Analyzing..."):
         try:
             if client:
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": "You are a helpful AI tutor."},
-                        {"role": "user", "content": question}
-                    ],
-                    max_tokens=200
-                )
-                answer = response.choices[0].message.content
+                answer = openai_response(question)
+                st.caption("Source: OpenAI (Commercial API)")
             else:
-                answer = fallback_ai_response(question)
+                answer = huggingface_response(question)
+                st.caption("Source: Hugging Face (Open-source AI)")
 
         except Exception:
-            answer = fallback_ai_response(question)
+            answer = huggingface_response(question)
+            st.caption("Source: Hugging Face (Fallback Mode)")
 
     st.success(answer)
 
-# -----------------------------
+# ----------------------------
 # Footer
-# -----------------------------
+# ----------------------------
 st.markdown("---")
-st.caption("Academic AI assistant")
+st.caption("Designed as a real-time, scalable academic AI system with intelligent failover.")
